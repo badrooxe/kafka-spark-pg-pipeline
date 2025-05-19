@@ -1,23 +1,40 @@
-from kafka import KafkaProducer
+import requests
 import json
 import time
-import random
-from datetime import datetime, timezone
+from kafka import KafkaProducer
 
 producer = KafkaProducer(
-    bootstrap_servers='localhost:9092',
+    bootstrap_servers='kafka:9092',
     value_serializer=lambda v: json.dumps(v).encode('utf-8')
 )
 
-topic = 'sensor-data'
+url = "https://earthquake.usgs.gov/fdsnws/event/1/query"
+params = {
+    "format": "geojson",
+    "eventtype": "earthquake",
+    "orderby": "time",
+    "limit": 5
+}
+
+seen_ids = set()
 
 while True:
-    data = {
-        'timestamp': datetime.now(timezone.utc).isoformat(),
-        'sensor_id': random.randint(1, 10),
-        'temperature': round(random.uniform(20.0, 30.0), 2),
-        'humidity': round(random.uniform(30.0, 60.0), 2)
-    }
-    producer.send(topic, value=data)
-    print(f"Sent: {data}")
-    time.sleep(1)
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    for feature in data["features"]:
+        quake_id = feature["id"]
+        if quake_id not in seen_ids:
+            seen_ids.add(quake_id)
+            props = feature["properties"]
+            payload = {
+                "id": quake_id,
+                "place": props["place"],
+                "magnitude": props["mag"],
+                "time": props["time"],
+                "updated": props["updated"]
+            }
+            producer.send("sensor-data", value=payload)
+            print("Sent:", payload)
+
+    time.sleep(30)  # check every 30 seconds
