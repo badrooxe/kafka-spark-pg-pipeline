@@ -34,7 +34,8 @@ schema = StructType() \
     .add("tests", IntegerType()) \
     .add("testsPerOneMillion", DoubleType()) \
     .add("population", IntegerType()) \
-    .add("continent", StringType())
+    .add("continent", StringType()) \
+    .add("date", StringType())
 
 session = SparkSession.builder \
     .appName("Covid Kafka Consumer") \

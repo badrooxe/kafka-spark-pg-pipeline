@@ -1,3 +1,4 @@
+import datetime
 import time
 import requests
 import json
@@ -22,8 +23,10 @@ def fetch_covid_data():
         return []
 
 def send_to_kafka(data):
+    today_str = datetime.now().strftime("%Y-%m-%d")
     for country in data:
         try:
+            country['date'] = today_str
             print(f"Sending data for {country['country']} to Kafka...")
             #print(f"Data: {country}")
             producer.send(TOPIC, value=country)
